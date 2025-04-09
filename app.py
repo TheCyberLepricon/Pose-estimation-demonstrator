@@ -76,6 +76,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     # Create a loop to read the latest frame from the camera using VideoCapture#read()
     fullscreen = False
     prev_time = 0
+    y = 0
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -88,6 +89,11 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
             data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
         landmarker.detect_async(mp_image, timestamp_ms)
+        
+        # Moving object adding to screen
+        x1, y1 = 100, y
+        x2, y2 = 200, y + 100
+        
         # FPS
         curr_time = time.time()
         fps = 1 / (curr_time - prev_time) if prev_time else 0
@@ -95,6 +101,10 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
         if to_window is not None:
             cv2.putText(to_window, f"FPS:{int(fps)}", (10,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 2)
+            y += 5
+            if y > frame.shape[0]:
+                y = 0
             cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_NORMAL)
             cv2.imshow("MediaPipe Pose Landmark", to_window)
 

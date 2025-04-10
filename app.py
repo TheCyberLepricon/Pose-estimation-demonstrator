@@ -101,9 +101,9 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
         if to_window is not None:
             cv2.putText(to_window, f"FPS:{int(fps)}", (10,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 2)
+            cv2.rectangle(to_window, (x1, y1), (x2, y2), (0, 0, 0), 2)
             y += 5
-            if y > frame.shape[0]:
+            if y > to_window.shape[0]:
                 y = 0
             cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_NORMAL)
             cv2.imshow("MediaPipe Pose Landmark", to_window)

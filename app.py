@@ -1,3 +1,4 @@
+import random
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -17,6 +18,10 @@ min_pose_detection_confidence = 0.5
 min_pose_presence_confidence = 0.5
 min_tracking_confidence = 0.5
 
+r_hand_x = 0
+r_hand_y = 0
+l_hand_x = 0
+l_hand_y = 0
 
 def draw_landmarks_on_image(rgb_image, detection_result):
     pose_landmarks_list = detection_result.pose_landmarks
@@ -49,9 +54,35 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
                  timestamp_ms: int):
     global to_window
     global last_timestamp_ms
+    global r_hand_x
+    global r_hand_y
+    global l_hand_x
+    global l_hand_y
+
     if timestamp_ms < last_timestamp_ms:
         return
     last_timestamp_ms = timestamp_ms
+    if detection_result.pose_landmarks:
+    pose_landmarks = detection_result.pose_landmarks[0]
+    # Linkerpols (index 15) en rechterpols (index 16)
+    left_wrist = pose_landmarks[15]
+    right_wrist = pose_landmarks[16]
+
+    frame_height, frame_width, _ = output_image.numpy_view().shape
+
+    # Omzetten naar pixels
+    left_wrist_x_px = int(left_wrist.x * frame_width)
+    left_wrist_y_px = int(left_wrist.y * frame_height)
+
+    right_wrist_x_px = int(right_wrist.x * frame_width)
+    right_wrist_y_px = int(right_wrist.y * frame_height)
+
+    # Toevoegen aan globaal variabel
+    r_hand_x = right_wrist_x_px
+    r_hand_y = right_wrist_y_px
+    l_hand_x = left_wrist_x_px
+    l_hand_y = left_wrist_y_px
+
     # print("pose landmarker result: {}".format(detection_result))
     to_window = cv2.cvtColor(
         draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
@@ -76,7 +107,9 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     # Create a loop to read the latest frame from the camera using VideoCapture#read()
     fullscreen = False
     prev_time = 0
-    y = 0
+    y_1 = 0
+    x = random.randint(40,600)
+    score = 0
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -91,8 +124,8 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
         landmarker.detect_async(mp_image, timestamp_ms)
         
         # Moving object adding to screen
-        x1, y1 = 100, y
-        x2, y2 = 200, y + 100
+        x1_1, y1_1 = x, y_1
+        x2_1, y2_1 = x + 100, y_1 + 100
         
         # FPS
         curr_time = time.time()
@@ -101,12 +134,26 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
         if to_window is not None:
             cv2.putText(to_window, f"FPS:{int(fps)}", (10,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.rectangle(to_window, (x1, y1), (x2, y2), (0, 0, 0), 2)
+            cv2.putText(to_window, f"FPS:{int(score)}", (300,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
+            cv2.rectangle(to_window, (x1_1, y1_1), (x2_1, y2_1), (0, 0, 255), -1)
+            cv2.rectangle(to_window, (x1_2, y1_2 (x2_2 y2_2(255, 0, 0), -1)
             y += 5
             if y > to_window.shape[0]:
                 y = 0
+                x = random.randint(40,600)
             cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_NORMAL)
             cv2.imshow("MediaPipe Pose Landmark", to_window)
+        if r_hand_x or l_hand_x >= x1_1 or <= x2_1:
+            if l_hand_y or l_hand_y >= y1_1 or <= y2_1:
+                cv2.rectangle(to_window, (300, 100), (350, 150), (0, 255, 0), -1)
+                #Dit is een test
+                score += 10
+        if r_hand_x or l_hand_x >= x1_2 or <= x2_2:
+            if l_hand_y or l_hand_y >= y1_1 or <= y2_1:
+                cv2.rectangle(to_window, (300, 300), (350,350), (0, 255, 0), -1)
+                #Dit is een test
+                score = 0
+                cv2.putText(to_window, f"GAME OVER", (300,300), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
 
         key = cv2.waitKey(1) & 0xFF
 

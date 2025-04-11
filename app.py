@@ -107,74 +107,103 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     # Create a loop to read the latest frame from the camera using VideoCapture#read()
     fullscreen = False
     prev_time = 0
-    y_1 = 0
-    y_2 = 20
-    x_1 = random.randint(40,600)
-    x_2 = random.randint(40,600)
+    
+    #Posities van scoreblokken en bommen
+    score_block_x = random.randint(40,600)
+    score_block_y = 0
+    
+    bomb_y = 20
+    bomb_x = random.randint(40,600)
+    
+    #Game state
     score = 0
+    cooldown_active = False
+    cooldown_end_time = 0
+    
     while cap.isOpened():
         success, image = cap.read()
         if not success:
             print("Image capture failed.")
             break
-    
-        # Convert the frame received from OpenCV to a MediaPipe’s Image object.
+
         mp_image = mp.Image(
             image_format=mp.ImageFormat.SRGB,
             data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
         landmarker.detect_async(mp_image, timestamp_ms)
+
+        score_block_x1 = score_block_x
+        score_block_y1 = score_block_y
+        score_block_x2 = score_block_x + 100
+        score_block_y2 = score_block_y + 100
         
-        # Moving objects adding to screen
-        x1_1, y1_1 = x_1, y_1
-        x2_1, y2_1 = x_1 + 100, y_1 + 100
-        
-        x1_2, y1_2 = x_2, y_2
-        x2_2, y2_2 = x_2 + 100, y_2 + 100
-        
-        # FPS
+        bomb_x1 = bomb_x
+        bomb_y1 = bomb_y
+        bomb_x2 = bomb_x + 100
+        bomb_y2 = bomb_y + 100
+
         curr_time = time.time()
         fps = 1 / (curr_time - prev_time) if prev_time else 0
         prev_time = curr_time
 
+        # Cooldown logic
+        if cooldown_active and curr_time >= cooldown_end_time:
+            cooldown_active = False
+
         if to_window is not None:
-            cv2.putText(to_window, f"FPS:{int(fps)}", (10,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(to_window, f"FPS:{int(score)}", (300,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
-            cv2.rectangle(to_window, (x1_1, y1_1), (x2_1, y2_1), (0, 0, 255), -1)
-            cv2.rectangle(to_window, (x1_2, y1_2), (x2_2, y2_2), (255, 0, 0), -1)
-            y_1 += 5
-            y_2 += 5
-            if y_1 > to_window.shape[0]:
-                y_1 = 0
-                x_1 = random.randint(40,600)
-            if y_2 > to_window.shape[0]:
-                y_2 = 0
-                x_2 = random.randint(40,600)
+            cv2.putText(to_window, f"FPS:{int(fps)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(to_window, f"Score:{int(score)}", (300, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
+            #Scoreblock
+            cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1) # kjleur aangepast van scoreblok naar groen (logischer)
+            #Bomb
+            cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1) # kleur aangepast van bom naar rood (logischer)
+            
+            # Beweeg blokken naar onder
+            score_block_y += 5
+            bomb_y += 5
+            
+            # Reset blok wanneer of screen
+            if score_block_y > to_window.shape[0]:
+                score_block_y = 0
+                score_block_x = random.randint(40, 600)
+            if bomb_y > to_window.shape[0]:
+                bomb_y = 0
+                bomb_x = random.randint(40, 600)
+
+            if not cooldown_active:
+                # Collision check for score block
+                if (( score_block_x1<= r_hand_x <= score_block_x2 and score_block_y1 <= r_hand_y <= score_block_y2) or
+                    (score_block_x <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)):
+                    score += 10
+                    score_block_y = 0
+                    score_block_x = random.randint(40, 600)
+                    print(score)
+
+                # Collision check for bomb
+                if ((bomb_x1 <= r_hand_x <= bomb_x2 and bomb_y1 <= r_hand_y <= bomb_y2) or
+                    (bomb_x1 <= l_hand_x <= bomb_x2 and bomb_y <= l_hand_y <= bomb_y2)):
+                    score = 0
+                    cooldown_active = True
+                    cooldown_end_time = curr_time + 5  # 5 seconds
+                    bomb_y = 0
+                    bomb_x = random.randint(40, 600)
+
+            # If in cooldown, show countdown
+            if cooldown_active:
+                remaining_time = int(cooldown_end_time - curr_time) + 1
+                cv2.putText(to_window, f"COOLDOWN: {remaining_time}", (250, 200), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 4)
+                cv2.putText(to_window, "GAME OVER", (230, 150), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 0), 3)
+
             cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_NORMAL)
             cv2.imshow("MediaPipe Pose Landmark", to_window)
-        if r_hand_x >= x1_1  or l_hand_x >= x1_1 and r_hand_x <= x2_1 or l_hand_x <= x2_1:
-            if r_hand_y >= y1_1 or l_hand_y >= y1_1 and r_hand_y <= y2_1 or r_hand_y <= y2_1:
-                cv2.rectangle(to_window, (300, 100), (350, 150), (0, 255, 0), -1)
-                #Dit is een test
-                score += 10
-        if r_hand_x >= x1_2 or l_hand_x >= x1_2 and r_hand_x <= x2_2 or l_hand_x <= x2_2:
-            if r_hand_y >= y1_2 or l_hand_y >= y1_2 and r_hand_y <= y2_2 or r_hand_y <= y2_2:
-                cv2.rectangle(to_window, (300, 300), (350,350), (0, 255, 0), -1)
-                #Dit is een test
-                score = 0
-                cv2.putText(to_window, f"GAME OVER", (300,300), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
 
         key = cv2.waitKey(1) & 0xFF
-
-        # Toggle fullscreen when "F" is pressed
         if key == ord('f'):
-            fullscreen = not fullscreen  # Toggle state
+            fullscreen = not fullscreen
             if fullscreen:
                 cv2.setWindowProperty("MediaPipe Pose Landmark", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             else:
                 cv2.setWindowProperty("MediaPipe Pose Landmark", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
-
-        # Exit when "Q" is pressed
         if key == ord('q'):
             break
 

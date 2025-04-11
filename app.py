@@ -63,6 +63,7 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
         return
     last_timestamp_ms = timestamp_ms
     if detection_result.pose_landmarks:
+<<<<<<< HEAD
         pose_landmarks = detection_result.pose_landmarks[0]
         # Linkerpols (index 15) en rechterpols (index 16)
         left_wrist = pose_landmarks[15]
@@ -86,6 +87,31 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
         # print("pose landmarker result: {}".format(detection_result))
         to_window = cv2.cvtColor(
             draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
+=======
+    pose_landmarks = detection_result.pose_landmarks[0]
+    # Linkerpols (index 15) en rechterpols (index 16)
+    left_wrist = pose_landmarks[15]
+    right_wrist = pose_landmarks[16]
+
+    frame_height, frame_width, _ = output_image.numpy_view().shape
+
+    # Omzetten naar pixels
+    left_wrist_x_px = int(left_wrist.x * frame_width)
+    left_wrist_y_px = int(left_wrist.y * frame_height)
+
+    right_wrist_x_px = int(right_wrist.x * frame_width)
+    right_wrist_y_px = int(right_wrist.y * frame_height)
+
+    # Toevoegen aan globaal variabel
+    r_hand_x = right_wrist_x_px
+    r_hand_y = right_wrist_y_px
+    l_hand_x = left_wrist_x_px
+    l_hand_y = left_wrist_y_px
+
+    # print("pose landmarker result: {}".format(detection_result))
+    to_window = cv2.cvtColor(
+        draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
+>>>>>>> 7042311a24f0300fac6643a584d45743c5a07f33
 
 
 base_options = python.BaseOptions(model_asset_path=model_path)
@@ -108,9 +134,13 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     fullscreen = False
     prev_time = 0
     y_1 = 0
+<<<<<<< HEAD
     y_2 = 20
     x_1 = random.randint(40,600)
     x_2 = random.randint(40,600)
+=======
+    x = random.randint(40,600)
+>>>>>>> 7042311a24f0300fac6643a584d45743c5a07f33
     score = 0
     while cap.isOpened():
         success, image = cap.read()
@@ -125,12 +155,18 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
         timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
         landmarker.detect_async(mp_image, timestamp_ms)
         
+<<<<<<< HEAD
         # Moving objects adding to screen
         x1_1, y1_1 = x_1, y_1
         x2_1, y2_1 = x_1 + 100, y_1 + 100
         
         x1_2, y1_2 = x_2, y_2
         x2_2, y2_2 = x_2 + 100, y_2 + 100
+=======
+        # Moving object adding to screen
+        x1_1, y1_1 = x, y_1
+        x2_1, y2_1 = x + 100, y_1 + 100
+>>>>>>> 7042311a24f0300fac6643a584d45743c5a07f33
         
         # FPS
         curr_time = time.time()
@@ -141,6 +177,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
             cv2.putText(to_window, f"FPS:{int(fps)}", (10,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
             cv2.putText(to_window, f"FPS:{int(score)}", (300,30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
             cv2.rectangle(to_window, (x1_1, y1_1), (x2_1, y2_1), (0, 0, 255), -1)
+<<<<<<< HEAD
             cv2.rectangle(to_window, (x1_2, y1_2), (x2_2, y2_2), (255, 0, 0), -1)
             y_1 += 5
             y_2 += 5
@@ -159,6 +196,22 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                 score += 10
         if r_hand_x >= x1_2 or l_hand_x >= x1_2 and r_hand_x <= x2_2 or l_hand_x <= x2_2:
             if r_hand_y >= y1_2 or l_hand_y >= y1_2 and r_hand_y <= y2_2 or r_hand_y <= y2_2:
+=======
+            cv2.rectangle(to_window, (x1_2, y1_2 (x2_2 y2_2(255, 0, 0), -1)
+            y += 5
+            if y > to_window.shape[0]:
+                y = 0
+                x = random.randint(40,600)
+            cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_NORMAL)
+            cv2.imshow("MediaPipe Pose Landmark", to_window)
+        if r_hand_x or l_hand_x >= x1_1 or <= x2_1:
+            if l_hand_y or l_hand_y >= y1_1 or <= y2_1:
+                cv2.rectangle(to_window, (300, 100), (350, 150), (0, 255, 0), -1)
+                #Dit is een test
+                score += 10
+        if r_hand_x or l_hand_x >= x1_2 or <= x2_2:
+            if l_hand_y or l_hand_y >= y1_1 or <= y2_1:
+>>>>>>> 7042311a24f0300fac6643a584d45743c5a07f33
                 cv2.rectangle(to_window, (300, 300), (350,350), (0, 255, 0), -1)
                 #Dit is een test
                 score = 0

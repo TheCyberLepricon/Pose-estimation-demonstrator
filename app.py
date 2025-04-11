@@ -13,73 +13,69 @@ mp_pose = mp.solutions.pose
 model_path = "models/pose_landmarker_full.task"
 video_source = 0
 
+# Detection config
 num_poses = 1
 min_pose_detection_confidence = 0.5
 min_pose_presence_confidence = 0.5
 min_tracking_confidence = 0.5
 
+# Hand positions
 r_hand_x = 0
 r_hand_y = 0
 l_hand_x = 0
 l_hand_y = 0
 
+# Shared state
+to_window = None
+last_timestamp_ms = 0
+pose_detected = False
+last_pose_time = time.time()
+
+# Countdown & Game Start Flags
+countdown_active = False
+countdown_start_time = None
+game_started = False
+
+# Draw pose landmarks
 def draw_landmarks_on_image(rgb_image, detection_result):
     pose_landmarks_list = detection_result.pose_landmarks
     annotated_image = np.copy(rgb_image)
 
     for idx in range(len(pose_landmarks_list)):
         pose_landmarks = pose_landmarks_list[idx]
-
-        pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        pose_landmarks_proto.landmark.extend([
-            landmark_pb2.NormalizedLandmark(
-                x=landmark.x,
-                y=landmark.y,
-                z=landmark.z) for landmark in pose_landmarks
-        ])
-        mp.solutions.drawing_utils.draw_landmarks(
-            annotated_image,
-            pose_landmarks_proto,
-            mp.solutions.pose.POSE_CONNECTIONS,
-            mp.solutions.drawing_styles.get_default_pose_landmarks_style())
+        proto = landmark_pb2.NormalizedLandmarkList()
+        proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in pose_landmarks])
+        mp_drawing.draw_landmarks(annotated_image, proto, mp_pose.POSE_CONNECTIONS,
+                                  mp_drawing.DrawingSpec(color=(0,255,0), thickness=2, circle_radius=3),
+                                  mp_drawing.DrawingSpec(color=(0,0,255), thickness=2))
     return annotated_image
 
-
-to_window = None
-last_timestamp_ms = 0
-
-def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp.Image,
-                 timestamp_ms: int):
-    global to_window
-    global last_timestamp_ms
-    global r_hand_x, r_hand_y, l_hand_x, l_hand_y
+# Pose callback
+def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
+    global to_window, last_timestamp_ms, r_hand_x, r_hand_y, l_hand_x, l_hand_y, pose_detected, last_pose_time
 
     if timestamp_ms < last_timestamp_ms:
         return
     last_timestamp_ms = timestamp_ms
 
+    rgb_np = output_image.numpy_view()
+    frame_height, frame_width, _ = rgb_np.shape
+
     if detection_result.pose_landmarks:
+        pose_detected = True
+        last_pose_time = time.time()
         pose_landmarks = detection_result.pose_landmarks[0]
-        if len(pose_landmarks) >= 17:
-            left_hand = pose_landmarks[19]
-            right_hand = pose_landmarks[20]
+        if len(pose_landmarks) >= 21:
+            l = pose_landmarks[19]
+            r = pose_landmarks[20]
+            l_hand_x = int(l.x * frame_width)
+            l_hand_y = int(l.y * frame_height)
+            r_hand_x = int(r.x * frame_width)
+            r_hand_y = int(r.y * frame_height)
 
-            frame_height, frame_width, _ = output_image.numpy_view().shape
+    to_window = cv2.cvtColor(draw_landmarks_on_image(rgb_np, detection_result), cv2.COLOR_RGB2BGR)
 
-            left_hand_x_px = int(left_hand.x * frame_width)
-            left_hand_y_px = int(left_hand.y * frame_height)
-
-            right_hand_x_px = int(right_hand.x * frame_width)
-            right_hand_y_px = int(right_hand.y * frame_height)
-
-            r_hand_x, r_hand_y = right_hand_x_px, right_hand_y_px
-            l_hand_x, l_hand_y = left_hand_x_px, left_hand_y_px
-            print("handen")
-
-        to_window = cv2.cvtColor(
-            draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
-
-
+# Init model
 base_options = python.BaseOptions(model_asset_path=model_path)
 options = vision.PoseLandmarkerOptions(
     base_options=base_options,
@@ -92,10 +88,12 @@ options = vision.PoseLandmarkerOptions(
     result_callback=print_result
 )
 
+# Main
 with vision.PoseLandmarker.create_from_options(options) as landmarker:
     cap = cv2.VideoCapture(video_source)
     fullscreen = False
     prev_time = 0
+    game_active = False
 
     success, image = cap.read()
     if not success:
@@ -104,16 +102,18 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
     frame_height, frame_width, _ = image.shape
 
+    # Game vars
     score_block_x = random.randint(40, frame_width - 100)
     score_block_y = 0
-
     bomb_y = 20
     bomb_x = random.randint(40, frame_width - 100)
-
     score = 0
     cooldown_active = False
     cooldown_end_time = 0
     topscore = 0
+    window_name = "MediaPipe Game"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -122,92 +122,123 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
         image = cv2.flip(image, 1)
         frame_height, frame_width, _ = image.shape
-
-        mp_image = mp.Image(
-            image_format=mp.ImageFormat.SRGB,
-            data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
         landmarker.detect_async(mp_image, timestamp_ms)
 
-        score_block_x1 = int(frame_width - score_block_x - 75)
-        score_block_x2 = int(frame_width - score_block_x)
-        score_block_y1 = int(score_block_y)
-        score_block_y2 = int(score_block_y + 75)
-
-        bomb_x1 = int(frame_width - bomb_x - 75)
-        bomb_x2 = int(frame_width - bomb_x)
-        bomb_y1 = int(bomb_y)
-        bomb_y2 = int(bomb_y + 75)
-
         curr_time = time.time()
-        fps = 1 / max(curr_time - prev_time, 1e-5)
-        prev_time = curr_time
 
-        if cooldown_active and curr_time >= cooldown_end_time:
-            cooldown_active = False
+        # Pose timeout check
+        if time.time() - last_pose_time > 3:
+            pose_detected = False
+            game_active = False
+            game_started = False
+            countdown_active = False
+
+        if not pose_detected:
+            to_window = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+            cv2.putText(to_window, "Waiting for player...", (120, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 3)
+            score_block_y = 0
+            bomb_y = 20
+        else:
+            # Start countdown if needed
+            if not game_started and not countdown_active:
+                countdown_active = True
+                countdown_start_time = time.time()
 
         if to_window is not None:
-            cv2.putText(to_window, f"Score:{int(score)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(to_window, f"TopScore:{int(topscore)}", (300, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
-            
-            
-            cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)
-            cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
-            
-            basespeed = 6
-            speed = 1 + ((score/20)*0.04)
-            score_block_y += basespeed ** speed
-            bomb_y += basespeed ** speed
-            
-            
 
-            if score_block_y > frame_height:
-                score_block_y = -80
-                score_block_x = random.randint(40, frame_width - 100)
-                if score > 0:
-                    score = score -20
-            if bomb_y > frame_height:
-                bomb_y = -80
-                bomb_x = random.randint(40, frame_width - 100)
+            # ⏳ Countdown logic
+            if countdown_active:
+                elapsed = time.time() - countdown_start_time
+                if elapsed < 3:
+                    count = 3 - int(elapsed)
+                    cv2.putText(to_window, f"Starting in {count}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 0), 4)
+                    cv2.imshow(window_name, to_window)
+                    key = cv2.waitKey(1) & 0xFF
+                    continue
+                elif elapsed < 3.5:
+                    cv2.putText(to_window, "GO!", (230, 250), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6)
+                    cv2.imshow(window_name, to_window)
+                    key = cv2.waitKey(1) & 0xFF
+                    continue
+                else:
+                    countdown_active = False
+                    game_started = True
+                    score_block_y = 0
+                    bomb_y = 20
+                    game_active = True
 
-            if not cooldown_active:
-                
-                if ((score_block_x1 <= r_hand_x <= score_block_x2 and score_block_y1 <= r_hand_y <= score_block_y2) or
-                    (score_block_x1 <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)):
-                    score += 10
+            if game_active:
+                # Game logic
+                speed = 1 + ((score / 20) * 0.04)
+                base_speed = 6
+                block_speed = base_speed ** speed
+
+                score_block_x1 = int(frame_width - score_block_x - 75)
+                score_block_x2 = int(frame_width - score_block_x)
+                score_block_y1 = int(score_block_y)
+                score_block_y2 = int(score_block_y + 75)
+
+                bomb_x1 = int(frame_width - bomb_x - 75)
+                bomb_x2 = int(frame_width - bomb_x)
+                bomb_y1 = int(bomb_y)
+                bomb_y2 = int(bomb_y + 75)
+
+                score_block_y += block_speed
+                bomb_y += block_speed
+
+                if score_block_y > frame_height:
                     score_block_y = -80
                     score_block_x = random.randint(40, frame_width - 100)
-                    print("Blok geraakt")
-                
-                if ((bomb_x1 <= r_hand_x <= bomb_x2 and bomb_y1 <= r_hand_y <= bomb_y2) or
-                    (bomb_x1 <= l_hand_x <= bomb_x2 and bomb_y1 <= l_hand_y <= bomb_y2)):
-                    if topscore < score:
-                        topscore = score
-                    score = 0
-                    cooldown_active = True
-                    cooldown_end_time = curr_time + 3.5
+                    score = max(score - 20, 0)
+                if bomb_y > frame_height:
                     bomb_y = -80
                     bomb_x = random.randint(40, frame_width - 100)
+
+                # Collisions
+                if not cooldown_active:
+                    hit_block = (score_block_x1 <= r_hand_x <= score_block_x2 and score_block_y1 <= r_hand_y <= score_block_y2) or \
+                                (score_block_x1 <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)
+                    hit_bomb = (bomb_x1 <= r_hand_x <= bomb_x2 and bomb_y1 <= r_hand_y <= bomb_y2) or \
+                               (bomb_x1 <= l_hand_x <= bomb_x2 and bomb_y1 <= l_hand_y <= bomb_y2)
+
+                    if hit_block:
+                        score += 10
+                        score_block_y = -80
+                        score_block_x = random.randint(40, frame_width - 100)
+                    if hit_bomb:
+                        achieved_score = score
+                        topscore = max(topscore, score)
+                        score = 0
+                        cooldown_active = True
+                        cooldown_end_time = curr_time + 3.5
+                        bomb_y = -80
+                        bomb_x = random.randint(40, frame_width - 100)
+
+                # Draw blocks and score
+                cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)
+                cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
+                cv2.putText(to_window, f"Score: {score}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(to_window, f"Top: {topscore}", (frame_width - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+                if cooldown_active:
+                    remaining = int(cooldown_end_time - curr_time) + 1
+                    cv2.putText(to_window, "GAME OVER", (180, 180), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+                    cv2.putText(to_window, f"Cooldown: {remaining}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
+                    cv2.putText(to_window, f"Score: {achieved_score}", (180, 300), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
                     
+                    if curr_time >= cooldown_end_time:
+                        cooldown_active = False
+                        achieved_score = 0
 
-            if cooldown_active:
-                remaining_time = int(cooldown_end_time - curr_time) + 1
-                cv2.putText(to_window, "GAME OVER", (230, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 4)
-                cv2.putText(to_window, f"COOLDOWN:", (250, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 4)
-                cv2.putText(to_window, f"{remaining_time}", (250, 250), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0),4)
-                cv2.putText(to_window, f"Score: {score}", (250,310), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,0),4)
-                
-
-            cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_KEEPRATIO)
-            cv2.imshow("MediaPipe Pose Landmark", to_window)
+            cv2.imshow(window_name, to_window)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('f'):
             fullscreen = not fullscreen
-            if fullscreen:
-                cv2.setWindowProperty("MediaPipe Pose Landmark", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            else:
-                cv2.setWindowProperty("MediaPipe Pose Landmark", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+            mode = cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, mode)
         if key == ord('q'):
             break
 

@@ -10,7 +10,7 @@ from mediapipe.framework.formats import landmark_pb2
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-model_path = "models/pose_landmarker_lite.task"
+model_path = "models/pose_landmarker_full.task"
 video_source = 0
 
 num_poses = 1
@@ -60,19 +60,21 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
 
     if detection_result.pose_landmarks:
         pose_landmarks = detection_result.pose_landmarks[0]
-        left_wrist = pose_landmarks[15]
-        right_wrist = pose_landmarks[16]
+        if len(pose_landmarks) >= 17:
+            left_hand = pose_landmarks[19]
+            right_hand = pose_landmarks[20]
 
-        frame_height, frame_width, _ = output_image.numpy_view().shape
+            frame_height, frame_width, _ = output_image.numpy_view().shape
 
-        left_wrist_x_px = int((1 - left_wrist.x) * frame_width)
-        left_wrist_y_px = int(left_wrist.y * frame_height)
+            left_hand_x_px = int(left_hand.x * frame_width)
+            left_hand_y_px = int(left_hand.y * frame_height)
 
-        right_wrist_x_px = int((1 - right_wrist.x) * frame_width)
-        right_wrist_y_px = int(right_wrist.y * frame_height)
+            right_hand_x_px = int(right_hand.x * frame_width)
+            right_hand_y_px = int(right_hand.y * frame_height)
 
-        r_hand_x, r_hand_y = right_wrist_x_px, right_wrist_y_px
-        l_hand_x, l_hand_y = left_wrist_x_px, left_wrist_y_px
+            r_hand_x, r_hand_y = right_hand_x_px, right_hand_y_px
+            l_hand_x, l_hand_y = left_hand_x_px, left_hand_y_px
+            print("handen")
 
         to_window = cv2.cvtColor(
             draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
@@ -111,7 +113,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     score = 0
     cooldown_active = False
     cooldown_end_time = 0
-
+    topscore = 0
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -127,15 +129,15 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
         timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
         landmarker.detect_async(mp_image, timestamp_ms)
 
-        score_block_x1 = frame_width - score_block_x - 50
-        score_block_x2 = frame_width - score_block_x
-        score_block_y1 = score_block_y
-        score_block_y2 = score_block_y + 50
+        score_block_x1 = int(frame_width - score_block_x - 75)
+        score_block_x2 = int(frame_width - score_block_x)
+        score_block_y1 = int(score_block_y)
+        score_block_y2 = int(score_block_y + 75)
 
-        bomb_x1 = frame_width - bomb_x - 50
-        bomb_x2 = frame_width - bomb_x
-        bomb_y1 = bomb_y
-        bomb_y2 = bomb_y + 50
+        bomb_x1 = int(frame_width - bomb_x - 75)
+        bomb_x2 = int(frame_width - bomb_x)
+        bomb_y1 = int(bomb_y)
+        bomb_y2 = int(bomb_y + 75)
 
         curr_time = time.time()
         fps = 1 / max(curr_time - prev_time, 1e-5)
@@ -145,42 +147,56 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
             cooldown_active = False
 
         if to_window is not None:
-            cv2.putText(to_window, f"FPS:{int(fps)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(to_window, f"Score:{int(score)}", (300, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
-
+            cv2.putText(to_window, f"Score:{int(score)}", (10, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(to_window, f"TopScore:{int(topscore)}", (300, 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 2)
+            
+            
             cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)
             cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
-
-            score_block_y += 5
-            bomb_y += 5
+            
+            basespeed = 6
+            speed = 1 + ((score/20)*0.04)
+            score_block_y += basespeed ** speed
+            bomb_y += basespeed ** speed
+            
+            
 
             if score_block_y > frame_height:
                 score_block_y = -80
                 score_block_x = random.randint(40, frame_width - 100)
+                if score > 0:
+                    score = score -20
             if bomb_y > frame_height:
                 bomb_y = -80
                 bomb_x = random.randint(40, frame_width - 100)
 
             if not cooldown_active:
+                
                 if ((score_block_x1 <= r_hand_x <= score_block_x2 and score_block_y1 <= r_hand_y <= score_block_y2) or
                     (score_block_x1 <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)):
                     score += 10
                     score_block_y = -80
                     score_block_x = random.randint(40, frame_width - 100)
-
+                    print("Blok geraakt")
+                
                 if ((bomb_x1 <= r_hand_x <= bomb_x2 and bomb_y1 <= r_hand_y <= bomb_y2) or
                     (bomb_x1 <= l_hand_x <= bomb_x2 and bomb_y1 <= l_hand_y <= bomb_y2)):
+                    if topscore < score:
+                        topscore = score
                     score = 0
                     cooldown_active = True
-                    cooldown_end_time = curr_time + 2
+                    cooldown_end_time = curr_time + 3.5
                     bomb_y = -80
                     bomb_x = random.randint(40, frame_width - 100)
+                    
 
             if cooldown_active:
                 remaining_time = int(cooldown_end_time - curr_time) + 1
-                cv2.putText(to_window, f"COOLDOWN:", (250, 200), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 255), 4)
-                cv2.putText(to_window, f"{remaining_time}", (250, 250), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 255, 0))
-                cv2.putText(to_window, "GAME OVER", (230, 150), cv2.FONT_HERSHEY_DUPLEX, 1.5, (0, 0, 0), 3)
+                cv2.putText(to_window, "GAME OVER", (230, 150), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 4)
+                cv2.putText(to_window, f"COOLDOWN:", (250, 200), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 4)
+                cv2.putText(to_window, f"{remaining_time}", (250, 250), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0),4)
+                cv2.putText(to_window, f"Score: {score}", (250,310), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,0),4)
+                
 
             cv2.namedWindow("MediaPipe Pose Landmark", cv2.WINDOW_KEEPRATIO)
             cv2.imshow("MediaPipe Pose Landmark", to_window)

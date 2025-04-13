@@ -46,8 +46,8 @@ def draw_landmarks_on_image(rgb_image, detection_result):
         proto = landmark_pb2.NormalizedLandmarkList()
         proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in pose_landmarks])
         mp_drawing.draw_landmarks(annotated_image, proto, mp_pose.POSE_CONNECTIONS,
-                                  mp_drawing.DrawingSpec(color=(0,255,0), thickness=2, circle_radius=3),
-                                  mp_drawing.DrawingSpec(color=(0,0,255), thickness=2))
+                                  mp_drawing.DrawingSpec(color=(0,255,0), thickness=2, circle_radius=3), #Landmark
+                                  mp_drawing.DrawingSpec(color=(0,0,255), thickness=2)) #Lijn
     return annotated_image
 
 # Pose callback

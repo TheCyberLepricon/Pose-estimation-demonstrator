@@ -13,6 +13,10 @@ mp_pose = mp.solutions.pose
 model_path = "models/pose_landmarker_full.task"
 video_source = 0
 
+# Cross locations
+kruisjes = [(800, 200), (800, 400), (800, 500)]
+kruis_kleuren = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
+
 # Detection config
 num_poses = 1
 min_pose_detection_confidence = 0.5
@@ -223,14 +227,22 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                         score_block_x = random.randint(40, frame_width - 100)
                         together = False
                     if hit_bomb:
-                        achieved_score = score
-                        topscore = max(topscore, score)
-                        score = 0
-                        cooldown_active = True
-                        cooldown_end_time = curr_time + 3.5
-                        bomb_y = -80
-                        bomb_x = random.randint(40, frame_width - 100)
-                        together = False
+                        if lives = 0:
+                            achieved_score = score
+                            topscore = max(topscore, score)
+                            score = 0
+                            cooldown_active = True
+                            cooldown_end_time = curr_time + 3.5
+                            bomb_y = -80
+                            bomb_x = random.randint(40, frame_width - 100)
+                            together = False
+                            lives = 3
+                        else:
+                            lives -= 1
+                            for i in range(len(kruis_kleuren)):
+                                if kruis_kleuren[i] == (0, 0, 0):
+                                    kruis_kleuren[i] = (0, 0, 255)
+                                    break  # maar eentje tegelijk veranderen
 
 
                 # Draw blocks and score
@@ -238,6 +250,15 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                 cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
                 cv2.putText(to_window, f"Score: {score}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(to_window, f"Top: {topscore}", (frame_width - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                for (cx, cy) in kruisjes:
+                    kleur = kruis_kleuren  
+                    dikte = 2
+                    lengte = 10  # lengte van kruis-lijnen
+
+                    # Lijn van linksboven naar rechtsonder
+                    cv2.line(to_window, (cx - lengte, cy - lengte), (cx + lengte, cy + lengte), kleur, dikte)
+                    # Lijn van linksonder naar rechtsboven
+                    cv2.line(to_window, (cx - lengte, cy + lengte), (cx + lengte, cy - lengte), kleur, dikte)
 
                 if cooldown_active:
                     remaining = int(cooldown_end_time - curr_time) + 1

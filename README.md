@@ -40,13 +40,13 @@ The speed of the boxes is increased in correspondence with the amount of points 
 
 ### The installation of the program
 
-Open Visual Studio Code
-Press on "Clone from repository"
-Enter the following url:
-Choose your prefered folder to store the program
-Open the program
-Open the terminal beneath
-Put in the terminal: "pip install mediapipe opencv-python"
-When that is installed press "Run python file" in the top right corner.
+1. Open Visual Studio Code
+2. Press on "Clone from repository"
+3. Enter the following url:
+4. Choose your prefered folder to store the program
+5. Make sure you are in the chosen folder
+6. Open the terminal beneath
+7. Put in the terminal: "pip install mediapipe opencv-python"
+8. When that is installed press "Run python file" in the top right corner.
 
 

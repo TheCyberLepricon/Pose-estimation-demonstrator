@@ -202,11 +202,26 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                                 (score_block_x1 <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)
                     hit_bomb = (bomb_x1 <= r_hand_x <= bomb_x2 and bomb_y1 <= r_hand_y <= bomb_y2) or \
                                (bomb_x1 <= l_hand_x <= bomb_x2 and bomb_y1 <= l_hand_y <= bomb_y2)
+                    together = False
+                    if (score_block_x2 >= bomb_x2) and (score_block_x1 <= bomb_x2):
+                        if (score_block_y1 <= bomb_y1) and (score_block_y2 >= bomb_y1):
+                            together = True
+                        elif (score_block_y1 <= bomb_y2) and (score_block_y2 >= bomb_y2):
+                            together = True
+                    elif (score_block_x1 <= bomb_x1) and (score_block_x2 >= bomb_x1):
+                        if (score_block_y1 <= bomb_y1) and (score_block_y2 >= bomb_y1):
+                            together = True
+                        elif (score_block_y1 <= bomb_y2) and (score_block_y2 >= bomb_y2):
+                            together = True
+                        
 
                     if hit_block:
+                        if together:
+                            score += 10
                         score += 10
                         score_block_y = -80
                         score_block_x = random.randint(40, frame_width - 100)
+                        together = False
                     if hit_bomb:
                         achieved_score = score
                         topscore = max(topscore, score)
@@ -215,6 +230,8 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                         cooldown_end_time = curr_time + 3.5
                         bomb_y = -80
                         bomb_x = random.randint(40, frame_width - 100)
+                        together = False
+
 
                 # Draw blocks and score
                 cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)

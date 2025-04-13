@@ -42,7 +42,7 @@ The speed of the boxes is increased in correspondence with the amount of points 
 
 1. Open Visual Studio Code
 2. Press on "Clone from repository"
-3. Enter the following url:
+3. Enter the following url: https://github.com/TheCyberLepricon/Pose-estimation-demonstrator.git
 4. Choose your prefered folder to store the program
 5. Make sure you are in the chosen folder
 6. Open the terminal beneath

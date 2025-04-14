@@ -3,11 +3,16 @@ The case elaboration of making a demonstrator for the pose estimation demonstrat
 
 
 ## Introduction
-The demonstrator made by caseteam Two Pair at Zuyd Univeristy was a case for the 1st year students.
+The demonstrator made by caseteam Two Pair at Zuyd University was a case for the 1st year students.
 The goal of this project was to intrigue and interest visitors of the open day about the concept of pose estimation, this has been done by implemting pose estimation with a game where the player has to avoid the red boxes and touch the green ones for points.
-The speed of the boxes is increased in correspondence with the amount of points the player has gathered.
+The speed of the boxes is increased in correspondence with the amount of points the player has gathered and increases exponentionally.
 
+## Credits
+The pose estimation code is based of the following page:
+https://gist.github.com/lanzani/f85175d8fbdafcabb7d480dd1bb769d9
 
+The used models are found on the following page:
+https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
 
 ## Requirements
 
@@ -49,4 +54,6 @@ The speed of the boxes is increased in correspondence with the amount of points 
 7. Put in the terminal: "pip install mediapipe opencv-python"
 8. When that is installed press "Run python file" in the top right corner.
 
+It is recommended that the full version of the pose estimation model is used, for as this model gives the most real-time accuracy compared to the lite version. However the lite version is functional, but less accurate and some faulty registrations may occur.
+If this change seems as the only option for your system, change the path on line 13 to: model_path = "models/pose_landmarker_lite.task"
 

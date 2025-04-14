@@ -14,7 +14,7 @@ model_path = "models/pose_landmarker_full.task"
 video_source = 0
 
 # Cross locations
-kruisjes = [(800, 200), (800, 400), (800, 500)]
+kruisjes = [(0, 0), (0, 0), (0, 0)]
 kruis_kleuren = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
 # Detection config
@@ -105,6 +105,12 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
         exit()
 
     frame_height, frame_width, _ = image.shape
+    center_x = frame_width // 2
+    kruisjes = [
+        (center_x - 60, 30),
+        (center_x, 30),
+        (center_x + 60, 30)
+    ]
 
     # Game vars
     score_block_x = random.randint(40, frame_width - 100)
@@ -112,6 +118,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
     bomb_y = 20
     bomb_x = random.randint(40, frame_width - 100)
     score = 0
+    lives = 3
     cooldown_active = False
     cooldown_end_time = 0
     topscore = 0
@@ -227,7 +234,8 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                         score_block_x = random.randint(40, frame_width - 100)
                         together = False
                     if hit_bomb:
-                        if lives = 0:
+                        if lives <= 1:  # game over on final life
+                            lives = 0
                             achieved_score = score
                             topscore = max(topscore, score)
                             score = 0
@@ -235,40 +243,48 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                             cooldown_end_time = curr_time + 3.5
                             bomb_y = -80
                             bomb_x = random.randint(40, frame_width - 100)
-                            together = False
-                            lives = 3
+                            kruis_kleuren = [(0, 0, 255)] * 3  # all crosses turn red
                         else:
                             lives -= 1
                             for i in range(len(kruis_kleuren)):
                                 if kruis_kleuren[i] == (0, 0, 0):
                                     kruis_kleuren[i] = (0, 0, 255)
-                                    break  # maar eentje tegelijk veranderen
+                                    break
+                            # Reset bomb position but don't trigger cooldown
+                            bomb_y = -80
+                            bomb_x = random.randint(40, frame_width - 100)
 
 
+                # Draw blocks and score
                 # Draw blocks and score
                 cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)
                 cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
                 cv2.putText(to_window, f"Score: {score}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(to_window, f"Top: {topscore}", (frame_width - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                for (cx, cy) in kruisjes:
-                    kleur = kruis_kleuren  
-                    dikte = 2
-                    lengte = 10  # lengte van kruis-lijnen
 
+
+                for i, (cx, cy) in enumerate(kruisjes):
+                    kleur = kruis_kleuren[i]  # use individual color per X
+                    dikte = 2
+                    lengte = 10
                     # Lijn van linksboven naar rechtsonder
                     cv2.line(to_window, (cx - lengte, cy - lengte), (cx + lengte, cy + lengte), kleur, dikte)
                     # Lijn van linksonder naar rechtsboven
                     cv2.line(to_window, (cx - lengte, cy + lengte), (cx + lengte, cy - lengte), kleur, dikte)
 
+                # Cooldown screen
                 if cooldown_active:
                     remaining = int(cooldown_end_time - curr_time) + 1
                     cv2.putText(to_window, "GAME OVER", (180, 180), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
                     cv2.putText(to_window, f"Cooldown: {remaining}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
                     cv2.putText(to_window, f"Score: {achieved_score}", (180, 300), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
-                    
+
                     if curr_time >= cooldown_end_time:
                         cooldown_active = False
                         achieved_score = 0
+                        # Reset lives and kruis_kleuren
+                        lives = 3
+                        kruis_kleuren = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
             cv2.imshow(window_name, to_window)
 

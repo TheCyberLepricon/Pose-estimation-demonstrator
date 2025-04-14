@@ -40,18 +40,34 @@ countdown_active = False
 countdown_start_time = None
 game_started = False
 
-# Draw pose landmarks
+# Updated: Draw pose landmarks (highlight hands)
 def draw_landmarks_on_image(rgb_image, detection_result):
     pose_landmarks_list = detection_result.pose_landmarks
     annotated_image = np.copy(rgb_image)
 
-    for idx in range(len(pose_landmarks_list)):
-        pose_landmarks = pose_landmarks_list[idx]
+    for pose_landmarks in pose_landmarks_list:
         proto = landmark_pb2.NormalizedLandmarkList()
         proto.landmark.extend([landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z) for l in pose_landmarks])
-        mp_drawing.draw_landmarks(annotated_image, proto, mp_pose.POSE_CONNECTIONS,
-                                  mp_drawing.DrawingSpec(color=(0,255,0), thickness=2, circle_radius=3), #Landmark
-                                  mp_drawing.DrawingSpec(color=(0,0,255), thickness=2)) #Lijn
+
+        for idx, landmark in enumerate(pose_landmarks):
+            x_px = int(landmark.x * annotated_image.shape[1])
+            y_px = int(landmark.y * annotated_image.shape[0])
+
+            # Highlight hands (landmarks 19 and 20)
+            if idx in [19, 20]:
+                cv2.circle(annotated_image, (x_px, y_px), 6, (0, 255, 255), -1)  # bright yellow
+            else:
+                cv2.circle(annotated_image, (x_px, y_px), 3, (150, 150, 150), -1)  # subtle gray
+
+        # Draw neutral lines between landmarks
+        mp_drawing.draw_landmarks(
+            annotated_image,
+            proto,
+            mp_pose.POSE_CONNECTIONS,
+            mp_drawing.DrawingSpec(color=(150, 150, 150), thickness=1, circle_radius=1),  # faded
+            mp_drawing.DrawingSpec(color=(150, 150, 150), thickness=1)
+        )
+
     return annotated_image
 
 # Pose callback
@@ -151,17 +167,12 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
             cv2.putText(to_window, "Waiting for player...", (120, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 3)
             score_block_y = 0
             bomb_y = 20
-            
-            #
         else:
-            # Start countdown if needed
             if not game_started and not countdown_active:
                 countdown_active = True
                 countdown_start_time = time.time()
 
         if to_window is not None:
-
-            
             if countdown_active:
                 elapsed = time.time() - countdown_start_time
                 if elapsed < 3:
@@ -186,7 +197,6 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                     game_active = True
 
             if game_active:
-                # Game logic
                 speed = 1 + ((score / 20) * 0.04)
                 base_speed = 6
                 block_speed = base_speed ** speed
@@ -212,7 +222,6 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                     bomb_y = -80
                     bomb_x = random.randint(40, frame_width - 100)
 
-                # Collisions
                 if not cooldown_active:
                     hit_block = (score_block_x1 <= r_hand_x <= score_block_x2 and score_block_y1 <= r_hand_y <= score_block_y2) or \
                                 (score_block_x1 <= l_hand_x <= score_block_x2 and score_block_y1 <= l_hand_y <= score_block_y2)
@@ -229,7 +238,6 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                             together = True
                         elif (score_block_y1 <= bomb_y2) and (score_block_y2 >= bomb_y2):
                             together = True
-                        
 
                     if hit_block:
                         if together:
@@ -239,7 +247,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                         score_block_x = random.randint(40, frame_width - 100)
                         together = False
                     if hit_bomb:
-                        if lives <= 1:  # game over on final life
+                        if lives <= 1:
                             lives = 0
                             achieved_score = score
                             topscore = max(topscore, score)
@@ -248,36 +256,28 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                             cooldown_end_time = curr_time + 3.5
                             bomb_y = -80
                             bomb_x = random.randint(40, frame_width - 100)
-                            kruis_kleuren = [(0, 0, 255)] * 3  # all crosses turn red
+                            kruis_kleuren = [(0, 0, 255)] * 3
                         else:
                             lives -= 1
                             for i in range(len(kruis_kleuren)):
                                 if kruis_kleuren[i] == (0, 0, 0):
                                     kruis_kleuren[i] = (0, 0, 255)
                                     break
-                            # Reset bomb position but don't trigger cooldown
                             bomb_y = -80
                             bomb_x = random.randint(40, frame_width - 100)
 
-
-                # Draw blocks and score
-                # Draw blocks and score
                 cv2.rectangle(to_window, (score_block_x1, score_block_y1), (score_block_x2, score_block_y2), (0, 255, 0), -1)
                 cv2.rectangle(to_window, (bomb_x1, bomb_y1), (bomb_x2, bomb_y2), (0, 0, 255), -1)
                 cv2.putText(to_window, f"Score: {score}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(to_window, f"Top: {topscore}", (frame_width - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-
                 for i, (cx, cy) in enumerate(kruisjes):
-                    kleur = kruis_kleuren[i]  # use individual color per X
+                    kleur = kruis_kleuren[i]
                     dikte = 2
                     lengte = 10
-                    # Lijn van linksboven naar rechtsonder
                     cv2.line(to_window, (cx - lengte, cy - lengte), (cx + lengte, cy + lengte), kleur, dikte)
-                    # Lijn van linksonder naar rechtsboven
                     cv2.line(to_window, (cx - lengte, cy + lengte), (cx + lengte, cy - lengte), kleur, dikte)
 
-                # Cooldown screen
                 if cooldown_active:
                     remaining = int(cooldown_end_time - curr_time) + 1
                     cv2.putText(to_window, "GAME OVER", (180, 180), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
@@ -287,13 +287,14 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                     if curr_time >= cooldown_end_time:
                         cooldown_active = False
                         achieved_score = 0
-                        # Reset lives and kruis_kleuren
                         lives = 3
                         kruis_kleuren = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
             cv2.imshow(window_name, to_window)
 
         key = cv2.waitKey(1) & 0xFF
+        if key == ord('r'):
+            topscore = 0
         if key == ord('f'):
             fullscreen = not fullscreen
             mode = cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL

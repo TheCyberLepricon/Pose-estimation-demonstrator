@@ -151,6 +151,8 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
             cv2.putText(to_window, "Waiting for player...", (120, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 3)
             score_block_y = 0
             bomb_y = 20
+            
+            #
         else:
             # Start countdown if needed
             if not game_started and not countdown_active:
@@ -159,11 +161,14 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
 
         if to_window is not None:
 
-            # ⏳ Countdown logic
+            
             if countdown_active:
                 elapsed = time.time() - countdown_start_time
                 if elapsed < 3:
                     count = 3 - int(elapsed)
+                    score = 0
+                    lives = 3
+                    kruis_kleuren = [(0,0,0), (0,0,0), (0,0,0)]
                     cv2.putText(to_window, f"Starting in {count}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 0), 4)
                     cv2.imshow(window_name, to_window)
                     key = cv2.waitKey(1) & 0xFF

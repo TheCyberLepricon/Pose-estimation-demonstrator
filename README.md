@@ -46,14 +46,35 @@ https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker
 ### The installation of the program
 
 1. Open Visual Studio Code
-2. Press on "Clone from repository"
-3. Enter the following url: https://github.com/TheCyberLepricon/Pose-estimation-demonstrator.git
-4. Choose your prefered folder to store the program
-5. Make sure you are in the chosen folder
-6. Open the terminal beneath
-7. Put in the terminal: "pip install mediapipe opencv-python"
-8. When that is installed press "Run python file" in the top right corner.
+2. Open a new window
+3. Press on "Clone from repository"
+4. Enter the following url: https://github.com/TheCyberLepricon/Pose-estimation-demonstrator.git
+5. Create a new folder and give it a name to your liking
+6. Make sure you are in the chosen folder
+7. Open "app.py"
+8. In the topmenu of Visual Studio Code, select "Terminal", then select "New Terminal"
+9. Put in the appeared terminal: "pip install mediapipe opencv-python". There can occur a warning, if this is the case see subscetion "Errors" below.
+10. When that is installed press "Run python file" in the top right corner.
 
 It is recommended that the full version of the pose estimation model is used, for as this model gives the most real-time accuracy compared to the lite version. However the lite version is functional, but less accurate and some faulty registrations may occur.
 If this change seems as the only option for your system, change the path on line 13 to: model_path = "models/pose_landmarker_lite.task"
+
+### Errors
+This section contains solutions to the known errors that might occur in the installation of the program. This guide assumes english is the primary language of your computer, if this is not the case some searches will not turn up result, as a fix look up the translation of the searches.
+#### Directory not on PATH
+This is how the error could look like:
+![image](https://github.com/user-attachments/assets/fc027836-a46f-46ec-816b-20662fd2c424)
+
+To solve this follow the next steps:
+1. Open the start menu of your computer
+2. Type "environment variables"
+3. Select: "Edit the system environment variables"
+4. Open Environment Variables Window
+5. Edit Path for your user account; Under "User Variables", find the variable named "Path" and select it
+6. Click "Edit"
+7. Click "New"
+8. Paste the your directory path that occured in the warning.
+9. Click "OK" to close each dialog box
+10. Close any open terminals and restart them to apply the changes
+
 

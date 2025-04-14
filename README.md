@@ -7,7 +7,9 @@ The demonstrator made by caseteam Two Pair at Zuyd Univeristy was a case for the
 The goal of this project was to intrigue and interest visitors of the open day about the concept of pose estimation, this has been done by implemting pose estimation with a game where the player has to avoid the red boxes and touch the green ones for points.
 The speed of the boxes is increased in correspondence with the amount of points the player has gathered.
 
-
+## Credits
+The pose estimation code is based of the following page:
+https://gist.github.com/lanzani/f85175d8fbdafcabb7d480dd1bb769d9
 
 ## Requirements
 

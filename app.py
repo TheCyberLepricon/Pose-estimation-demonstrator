@@ -180,7 +180,8 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                     score = 0
                     lives = 3
                     kruis_kleuren = [(0,0,0), (0,0,0), (0,0,0)]
-                    cv2.putText(to_window, f"Starting in {count}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 0), 4)
+                    cv2.putText(to_window, f"Starting in {count}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 4)
+                    cv2.putText(to_window, "Grab the green boxes", (180, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (50, 50, 50), 2)
                     cv2.imshow(window_name, to_window)
                     key = cv2.waitKey(1) & 0xFF
                     continue

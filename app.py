@@ -281,7 +281,7 @@ with vision.PoseLandmarker.create_from_options(options) as landmarker:
                 if cooldown_active:
                     remaining = int(cooldown_end_time - curr_time) + 1
                     cv2.putText(to_window, "GAME OVER", (180, 180), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
-                    cv2.putText(to_window, f"Cooldown: {remaining}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
+                    cv2.putText(to_window, f"Restarting in: {remaining}", (180, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
                     cv2.putText(to_window, f"Score: {achieved_score}", (180, 300), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 0), 3)
 
                     if curr_time >= cooldown_end_time:

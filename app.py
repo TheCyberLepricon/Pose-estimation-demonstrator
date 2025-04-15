@@ -13,7 +13,7 @@ mp_pose = mp.solutions.pose
 model_path = "models/pose_landmarker_full.task"
 video_source = 0
 
-# Cross locations
+# Kruisjes locations
 kruisjes = [(0, 0), (0, 0), (0, 0)]
 kruis_kleuren = [(0, 0, 0), (0, 0, 0), (0, 0, 0)]
 
@@ -55,7 +55,7 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 
             # Highlight hands (landmarks 19 and 20)
             if idx in [19, 20]:
-                cv2.circle(annotated_image, (x_px, y_px), 6, (0, 255, 255), -1)  # bright yellow
+                cv2.circle(annotated_image, (x_px, y_px), 6, (0, 255, 0), -1)  # bright Blue
             else:
                 cv2.circle(annotated_image, (x_px, y_px), 3, (150, 150, 150), -1)  # subtle gray
 
